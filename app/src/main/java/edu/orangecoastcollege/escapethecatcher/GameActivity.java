@@ -8,6 +8,7 @@ import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -15,7 +16,7 @@ import android.widget.TextView;
 import java.util.ArrayList;
 
 
-public class GameActivity extends Activity {
+public class GameActivity extends Activity implements GestureDetector.OnGestureListener{
 
     private GestureDetector aGesture;
 
@@ -78,6 +79,9 @@ public class GameActivity extends Activity {
         winsTextView.setText(resources.getString(R.string.win) + wins);
         lossesTextView.setText(resources.getString(R.string.losses) + losses);
 
+        // Instantiate the GestureDetector
+        aGesture = new GestureDetector(this, this);
+
         startNewGame();
     }
 
@@ -115,6 +119,8 @@ public class GameActivity extends Activity {
                     exitImageView.setY(row * SQUARE + OFFSET);
                     activityGameRelativeLayout.addView(exitImageView);
                     visualObjects.add(exitImageView);
+                    exitRow = row;
+                    exitCol = col;
                 }
             }
         }
@@ -168,8 +174,43 @@ public class GameActivity extends Activity {
         // TODO: Determine which absolute velocity is greater (x or y)
         // TODO: If x is negative, move player left.  Else if x is positive, move player right.
         // TODO: If y is negative, move player down.  Else if y is positive, move player up.
-
         // TODO: Then move the zombie, using the player's row and column position.
+
+        String direction = "";
+        if(Math.abs(velocityX) > Math.abs(velocityY)){
+            // X is larger (MOVE LEFT or RIGHT)
+            // Determine if move is LEFT:
+            if(velocityX < -FLING_THRESHOLD)
+                direction = "LEFT";
+            else if(velocityX > FLING_THRESHOLD)
+                direction = "RIGHT";
+        }
+        else{
+            if(velocityY < -FLING_THRESHOLD)
+                direction = "DOWN";
+            else if(velocityY > FLING_THRESHOLD)
+                direction = "UP";
+        }
+        // Only move the player if the direction is not an empty string
+        if(!direction.equals("")){
+            player.move(gameBoard, direction);
+            playerImageView.setX(player.getCol() * SQUARE + OFFSET);
+            playerImageView.setY(player.getRow() * SQUARE + OFFSET);
+        }
+        // Move the zombie no matter what
+        zombie.move(gameBoard, player.getCol(), player.getRow());
+        zombieImageView.setX(zombie.getCol() * SQUARE + OFFSET);
+        zombieImageView.setY(zombie.getRow() * SQUARE + OFFSET);
+
+        // Determine if the game is won or loss
+        // Game win
+        if(player.getCol() == exitCol && player.getRow() == exitRow){
+            winsTextView.setText(resources.getString(R.string.win) + (++wins));
+        }
+        if(player.getCol() == zombie.getCol() && player.getRow() == zombie.getRow()){
+            lossesTextView.setText(resources.getString(R.string.losses) + (++losses));
+            startNewGame();
+        }
     }
 
 
@@ -191,5 +232,41 @@ public class GameActivity extends Activity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public boolean onDown(MotionEvent motionEvent) {
+        return false;
+    }
+
+    @Override
+    public void onShowPress(MotionEvent motionEvent) {
+
+    }
+
+    @Override
+    public boolean onSingleTapUp(MotionEvent motionEvent) {
+        return false;
+    }
+
+    @Override
+    public boolean onScroll(MotionEvent motionEvent, MotionEvent motionEvent1, float v, float v1) {
+        return false;
+    }
+
+    @Override
+    public void onLongPress(MotionEvent motionEvent) {
+
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        return aGesture.onTouchEvent(event);
+    }
+
+    @Override
+    public boolean onFling(MotionEvent motionEvent, MotionEvent motionEvent1, float v, float v1) {
+        movePlayer(v, v1);
+        return true;
     }
 }
